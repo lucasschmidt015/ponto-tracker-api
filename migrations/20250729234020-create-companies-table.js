@@ -45,11 +45,7 @@ module.exports = {
         type: Sequelize.TIME,
         allowNull: true
       },
-      working_hours_per_day: {
-        type: Sequelize.INTEGER,
-        allowNull: true
-      },
-      total_range_in_meters: {
+      register_range_meters: {
         type: Sequelize.INTEGER,
         allowNull: true
       },

@@ -11,7 +11,7 @@
     "start": "nest start",
     "start:dev": "NODE_ENV=development nest start --watch",
     "start:debug": "nest start --debug --watch",
-    "start:prod": "NODE_ENV=production node dist/main",
+    "start:prod": "NODE_ENV=production sequelize-cli db:migrate --config config/sequelize.js && node dist/main",
     "database:create": "ts-node -r tsconfig-paths/register ./node_modules/.bin/sequelize-cli db:create --config config/sequelize.js",
     "migration:generate": "npx sequelize-cli migration:generate --name",
     "migration:create": "npx sequelize-cli migration:create --name",

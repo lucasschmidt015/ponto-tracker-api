@@ -89,7 +89,12 @@ interface MigrationModule {
   down: (queryInterface: any, Sequelize: any) => Promise<void>;
 }
 
-// Create Umzug instance
+interface SeederModule {
+  up: (queryInterface: any, Sequelize: any) => Promise<void>;
+  down: (queryInterface: any, Sequelize: any) => Promise<void>;
+}
+
+// Create Umzug instance for migrations
 const umzug = new Umzug({
   migrations: {
     glob: path.join(process.cwd(), "migrations", "*.js"),
@@ -116,6 +121,46 @@ const umzug = new Umzug({
   storage: new SequelizeStorage({
     sequelize: sequelize,
     tableName: "sequelize_meta",
+  }),
+  logger: {
+    info: (message: Record<string, unknown>) =>
+      console.log(`ℹ️  ${JSON.stringify(message)}`),
+    warn: (message: Record<string, unknown>) =>
+      console.warn(`⚠️  ${JSON.stringify(message)}`),
+    error: (message: Record<string, unknown>) =>
+      console.error(`❌ ${JSON.stringify(message)}`),
+    debug: (message: Record<string, unknown>) =>
+      console.debug(`🐛 ${JSON.stringify(message)}`),
+  },
+});
+
+// Create Umzug instance for seeders
+const seederUmzug = new Umzug({
+  migrations: {
+    glob: path.join(process.cwd(), "src", "seeders", "*.js"),
+    resolve: ({ name, path: seederPath }) => {
+      if (!seederPath) {
+        throw new Error(`Seeder path is undefined for ${name}`);
+      }
+
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
+      const seeder = require(seederPath) as SeederModule;
+
+      return {
+        name,
+        up: async () => {
+          return await seeder.up(sequelize.getQueryInterface(), Sequelize);
+        },
+        down: async () => {
+          return await seeder.down(sequelize.getQueryInterface(), Sequelize);
+        },
+      };
+    },
+  },
+  context: sequelize.getQueryInterface(),
+  storage: new SequelizeStorage({
+    sequelize: sequelize,
+    tableName: "sequelize_data",
   }),
   logger: {
     info: (message: Record<string, unknown>) =>
@@ -191,6 +236,83 @@ async function getMigrationStatus() {
   }
 }
 
+async function runSeeders() {
+  try {
+    console.log("🌱 Starting seeders...");
+    const seeders = await seederUmzug.up();
+
+    if (seeders.length === 0) {
+      console.log("✅ No pending seeders found");
+    } else {
+      console.log(`✅ Successfully executed ${seeders.length} seeder(s):`);
+      seeders.forEach((seeder) => {
+        console.log(`   ✓ ${seeder.name}`);
+      });
+    }
+  } catch (error) {
+    console.error("❌ Seeder failed:", error);
+    throw error;
+  }
+}
+
+async function rollbackSeeders() {
+  try {
+    console.log("🔄 Rolling back last seeder...");
+    const seeders = await seederUmzug.down();
+
+    if (seeders.length === 0) {
+      console.log("ℹ️  No seeders to rollback");
+    } else {
+      console.log(`✅ Successfully rolled back ${seeders.length} seeder(s):`);
+      seeders.forEach((seeder) => {
+        console.log(`   ✓ ${seeder.name}`);
+      });
+    }
+  } catch (error) {
+    console.error("❌ Seeder rollback failed:", error);
+    throw error;
+  }
+}
+
+async function rollbackAllSeeders() {
+  try {
+    console.log("🔄 Rolling back all seeders...");
+    const seeders = await seederUmzug.down({ to: 0 });
+
+    if (seeders.length === 0) {
+      console.log("ℹ️  No seeders to rollback");
+    } else {
+      console.log(`✅ Successfully rolled back ${seeders.length} seeder(s):`);
+      seeders.forEach((seeder) => {
+        console.log(`   ✓ ${seeder.name}`);
+      });
+    }
+  } catch (error) {
+    console.error("❌ Seeder rollback failed:", error);
+    throw error;
+  }
+}
+
+async function getSeederStatus() {
+  try {
+    console.log("🌱 Checking seeder status...");
+    const executed = await seederUmzug.executed();
+    const pending = await seederUmzug.pending();
+
+    console.log("\n=== Seeder Status ===");
+    console.log(`Seeders up to date: ${pending.length === 0 ? "✅" : "❌"}`);
+    console.log(`\nExecuted seeders (${executed.length}):`);
+    executed.forEach((seeder) => console.log(`  ✅ ${seeder.name}`));
+
+    console.log(`\nPending seeders (${pending.length}):`);
+    pending.forEach((seeder) => console.log(`  ⏳ ${seeder.name}`));
+    console.log("");
+  } catch (error) {
+    console.error("❌ Failed to get seeder status:", error);
+    throw error;
+  }
+}
+
 async function main() {
   const command = process.argv[2];
 
@@ -208,19 +330,40 @@ async function main() {
       case "status":
         await getMigrationStatus();
         break;
+      case "seed":
+        await runSeeders();
+        break;
+      case "seed:rollback":
+        await rollbackSeeders();
+        break;
+      case "seed:rollback:all":
+        await rollbackAllSeeders();
+        break;
+      case "seed:status":
+        await getSeederStatus();
+        break;
       default:
         console.log(`
 Usage: npm run migrate:cli <command>
 
-Commands:
+Migration Commands:
   run      - Run all pending migrations
   rollback - Rollback the last migration
   status   - Show migration status
+
+Seeder Commands:
+  seed             - Run all pending seeders
+  seed:rollback    - Rollback the last seeder
+  seed:rollback:all - Rollback all seeders
+  seed:status      - Show seeder status
 
 Examples:
   npm run migrate:cli run
   npm run migrate:cli rollback
   npm run migrate:cli status
+  npm run migrate:cli seed
+  npm run migrate:cli seed:rollback
+  npm run migrate:cli seed:status
         `);
         process.exit(1);
     }

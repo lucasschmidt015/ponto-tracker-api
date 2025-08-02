@@ -35,15 +35,16 @@ npm run migrate:rollback
 The project provides several npm scripts for managing migrations:
 
 ```bash
-# Main CLI commands (standalone, no NestJS dependencies)
+# Migration commands (recommended)
 npm run migrate:run      # Run all pending migrations
 npm run migrate:rollback # Rollback the last migration
 npm run migrate:status   # Check migration status
 
-# Legacy Sequelize CLI commands (still available)
-npm run migration:run    # Using sequelize-cli
-npm run migration:undo   # Using sequelize-cli
-npm run migration:status # Using sequelize-cli
+# Seeder commands (NEW!)
+npm run seed:run         # Run all pending seeders
+npm run seed:rollback    # Rollback the last seeder
+npm run seed:rollback:all # Rollback all seeders
+npm run seed:status      # Check seeder status
 ```
 
 ### Standalone CLI Script
@@ -51,10 +52,16 @@ npm run migration:status # Using sequelize-cli
 The `migrate-cli.ts` script works independently of your NestJS application:
 
 ```bash
-# Direct usage
+# Direct migration usage
 npm run migrate:cli run
 npm run migrate:cli rollback
 npm run migrate:cli status
+
+# Direct seeder usage
+npm run migrate:cli seed
+npm run migrate:cli seed:rollback
+npm run migrate:cli seed:rollback:all
+npm run migrate:cli seed:status
 ```
 
 This is perfect for:

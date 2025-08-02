@@ -8,12 +8,19 @@ interface MigrationModule {
   down: (queryInterface: any, Sequelize: any) => Promise<void>;
 }
 
+interface SeederModule {
+  up: (queryInterface: any, Sequelize: any) => Promise<void>;
+  down: (queryInterface: any, Sequelize: any) => Promise<void>;
+}
+
 @Injectable()
 export class MigrationService {
   private readonly logger = new Logger(MigrationService.name);
   private umzug: Umzug;
+  private seederUmzug: Umzug;
 
   constructor(private sequelize: Sequelize) {
+    // Migration Umzug instance
     this.umzug = new Umzug({
       migrations: {
         glob: path.join(process.cwd(), "migrations", "*.js"),
@@ -46,6 +53,48 @@ export class MigrationService {
       storage: new SequelizeStorage({
         sequelize: this.sequelize,
         tableName: "sequelize_meta",
+      }),
+      logger: {
+        info: (message) => this.logger.log(message),
+        warn: (message) => this.logger.warn(message),
+        error: (message) => this.logger.error(message),
+        debug: (message) => this.logger.debug(message),
+      },
+    });
+
+    // Seeder Umzug instance
+    this.seederUmzug = new Umzug({
+      migrations: {
+        glob: path.join(process.cwd(), "src", "seeders", "*.js"),
+        resolve: ({ name, path: seederPath }) => {
+          if (!seederPath) {
+            throw new Error(`Seeder path is undefined for ${name}`);
+          }
+
+          // eslint-disable-next-line @typescript-eslint/no-require-imports
+          const seeder = require(seederPath) as SeederModule;
+
+          return {
+            name,
+            up: async () => {
+              return await seeder.up(
+                this.sequelize.getQueryInterface(),
+                this.sequelize.constructor,
+              );
+            },
+            down: async () => {
+              return await seeder.down(
+                this.sequelize.getQueryInterface(),
+                this.sequelize.constructor,
+              );
+            },
+          };
+        },
+      },
+      context: this.sequelize.getQueryInterface(),
+      storage: new SequelizeStorage({
+        sequelize: this.sequelize,
+        tableName: "sequelize_data",
       }),
       logger: {
         info: (message) => this.logger.log(message),
@@ -206,6 +255,112 @@ export class MigrationService {
       return pending.length === 0;
     } catch (error) {
       this.logger.error("Failed to check database status:", error);
+      throw error;
+    }
+  }
+
+  // ============= SEEDER METHODS =============
+
+  /**
+   * Run all pending seeders
+   */
+  async runSeeders(): Promise<void> {
+    try {
+      this.logger.log("Starting database seeders...");
+      const seeders = await this.seederUmzug.up();
+
+      if (seeders.length === 0) {
+        this.logger.log("No pending seeders found");
+      } else {
+        this.logger.log(`Successfully executed ${seeders.length} seeder(s):`);
+        seeders.forEach((seeder) => {
+          this.logger.log(`  ✓ ${seeder.name}`);
+        });
+      }
+    } catch (error) {
+      this.logger.error("Seeder failed:", error);
+      throw error;
+    }
+  }
+
+  /**
+   * Rollback the last seeder
+   */
+  async rollbackLastSeeder(): Promise<void> {
+    try {
+      this.logger.log("Rolling back last seeder...");
+      const seeders = await this.seederUmzug.down();
+
+      if (seeders.length === 0) {
+        this.logger.log("No seeders to rollback");
+      } else {
+        this.logger.log(
+          `Successfully rolled back ${seeders.length} seeder(s):`,
+        );
+        seeders.forEach((seeder) => {
+          this.logger.log(`  ✓ ${seeder.name}`);
+        });
+      }
+    } catch (error) {
+      this.logger.error("Seeder rollback failed:", error);
+      throw error;
+    }
+  }
+
+  /**
+   * Rollback all seeders
+   */
+  async rollbackAllSeeders(): Promise<void> {
+    try {
+      this.logger.log("Rolling back all seeders...");
+      const seeders = await this.seederUmzug.down({ to: 0 });
+
+      if (seeders.length === 0) {
+        this.logger.log("No seeders to rollback");
+      } else {
+        this.logger.log(
+          `Successfully rolled back ${seeders.length} seeder(s):`,
+        );
+        seeders.forEach((seeder) => {
+          this.logger.log(`  ✓ ${seeder.name}`);
+        });
+      }
+    } catch (error) {
+      this.logger.error("Seeder rollback failed:", error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get seeder status
+   */
+  async getSeederStatus(): Promise<{
+    executed: string[];
+    pending: string[];
+  }> {
+    try {
+      const executed = await this.seederUmzug.executed();
+      const pending = await this.seederUmzug.pending();
+
+      return {
+        executed: executed.map((seeder) => seeder.name),
+        pending: pending.map((seeder) => seeder.name),
+      };
+    } catch (error) {
+      this.logger.error("Failed to get seeder status:", error);
+      throw error;
+    }
+  }
+
+  /**
+   * Check if all seeders are executed
+   */
+  async areSeedersUpToDate(): Promise<boolean> {
+    try {
+      const pending = await this.seederUmzug.pending();
+      return pending.length === 0;
+    } catch (error) {
+      this.logger.error("Failed to check seeder status:", error);
       throw error;
     }
   }

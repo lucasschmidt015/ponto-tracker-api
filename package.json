@@ -24,6 +24,7 @@
     "migrate:run": "npm run migrate:cli run",
     "migrate:rollback": "npm run migrate:cli rollback",
     "migrate:status": "npm run migrate:cli status",
+    "db:test": "ts-node -r tsconfig-paths/register src/scripts/test-connection.ts",
     "lint": "eslint \"{src,apps,libs,test}/**/*.ts\" --fix",
     "test": "jest",
     "test:watch": "jest --watch",

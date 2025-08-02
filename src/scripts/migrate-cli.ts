@@ -7,16 +7,82 @@ import * as dotenv from "dotenv";
 
 dotenv.config();
 
+// Function to get database config using the same logic as your app
+function getDatabaseConfig() {
+  // Check for DATABASE_URL first (common in production like Heroku, Railway, etc.)
+  if (process.env.DATABASE_URL) {
+    console.log(`📎 Using DATABASE_URL for connection`);
+    return {
+      url: process.env.DATABASE_URL,
+      dialect: "postgres" as const,
+      logging: false,
+      dialectOptions: {
+        ssl:
+          process.env.NODE_ENV === "production"
+            ? {
+                require: true,
+                rejectUnauthorized: false,
+              }
+            : false,
+      },
+    };
+  }
+
+  const isProduction =
+    process.env.NODE_ENV === "production" || process.env.NODE_ENV === "prod";
+
+  if (isProduction) {
+    // Production config (matches your prod.ts)
+    return {
+      database: process.env.DATABASE_NAME || "ponto-tracker",
+      username: process.env.DATABASE_USER || "postgres",
+      password: process.env.DATABASE_PASSWORD || "",
+      host: process.env.DATABASE_HOST || "localhost",
+      port: process.env.DATABASE_PORT
+        ? parseInt(process.env.DATABASE_PORT, 10)
+        : 5432,
+      dialect: "postgres" as const,
+      logging: false,
+      dialectOptions: {
+        ssl: {
+          require: true,
+          rejectUnauthorized: false,
+        },
+      },
+    };
+  } else {
+    // Development config - try multiple naming conventions
+    return {
+      database:
+        process.env.DB_DATABASE || process.env.DATABASE_NAME || "postgres",
+      username:
+        process.env.DB_USERNAME || process.env.DATABASE_USER || "postgres",
+      password: process.env.DB_PASSWORD || process.env.DATABASE_PASSWORD || "",
+      host: process.env.DB_HOST || process.env.DATABASE_HOST || "localhost",
+      port: parseInt(
+        process.env.DB_PORT || process.env.DATABASE_PORT || "5432",
+      ),
+      dialect: "postgres" as const,
+      logging: false,
+    };
+  }
+}
+
 // Create Sequelize instance with the same config as your app
-const sequelize = new Sequelize({
-  database: process.env.DB_DATABASE || "postgres",
-  username: process.env.DB_USERNAME || "postgres",
-  password: process.env.DB_PASSWORD || "",
-  host: process.env.DB_HOST || "localhost",
-  port: parseInt(process.env.DB_PORT || "5432"),
-  dialect: "postgres",
-  logging: false,
-});
+const config = getDatabaseConfig();
+const sequelize = new Sequelize(config);
+
+// Log the connection details for debugging (without password)
+console.log(`🔗 Attempting to connect to database:`);
+if (process.env.DATABASE_URL) {
+  console.log(`   Using DATABASE_URL connection`);
+} else {
+  console.log(`   Host: ${config.host}:${config.port}`);
+  console.log(`   Database: ${config.database}`);
+  console.log(`   User: ${config.username}`);
+}
+console.log(`   Environment: ${process.env.NODE_ENV || "development"}`);
+console.log(``);
 
 interface MigrationModule {
   up: (queryInterface: any, Sequelize: any) => Promise<void>;

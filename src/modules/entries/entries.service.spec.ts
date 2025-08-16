@@ -4,11 +4,14 @@ import { getModelToken } from '@nestjs/sequelize';
 import { Entries } from './entries.model';
 import { WorkingDaysService } from '../working-days/working-days.service';
 import { CompaniesService } from '../companies/companies.service';
+import { EntriesApprovalService } from '../entries_approval/entries_approval.service';
 import { RegisterNewEntryDto } from './dtos/register-new-entry.dto';
-import { NotFoundException } from '@nestjs/common';
+import { NotFoundException, BadRequestException } from '@nestjs/common';
 
 const mockEntriesModel = {
 	create: jest.fn(),
+	findOne: jest.fn(),
+	findAll: jest.fn(),
 };
 
 const mockWorkingDaysService = {
@@ -17,6 +20,10 @@ const mockWorkingDaysService = {
 
 const mockCompaniesService = {
 	findOne: jest.fn(),
+};
+
+const mockEntriesApprovalService = {
+	createEntryApproval: jest.fn(),
 };
 
 describe('EntriesService', () => {
@@ -29,6 +36,7 @@ describe('EntriesService', () => {
 				{ provide: getModelToken(Entries), useValue: mockEntriesModel },
 				{ provide: WorkingDaysService, useValue: mockWorkingDaysService },
 				{ provide: CompaniesService, useValue: mockCompaniesService },
+				{ provide: EntriesApprovalService, useValue: mockEntriesApprovalService },
 			],
 		}).compile();
 
@@ -156,6 +164,8 @@ describe('EntriesService', () => {
 				workingDay,
 			);
 			jest.spyOn(service, 'validadeEntryLocation').mockResolvedValue(true);
+			// Mock no existing entry in the same minute
+			mockEntriesModel.findOne.mockResolvedValue(null);
 			const createdEntry = { _id: 'entry1' };
 			mockEntriesModel.create.mockResolvedValue(createdEntry);
 
@@ -176,6 +186,63 @@ describe('EntriesService', () => {
 					is_approved: true,
 				}),
 			);
+		});
+
+		it('should throw BadRequestException when user tries to create entry within same minute', async () => {
+			const entry: RegisterNewEntryDto = {
+				user_id: 'user1',
+				company_id: 'company1',
+				latitude: '0',
+				longitude: '0',
+			};
+
+			// Mock existing entry in the same minute
+			const existingEntry = {
+				_id: 'existing-entry',
+				user_id: 'user1',
+				entry_time: new Date(),
+			};
+			mockEntriesModel.findOne.mockResolvedValue(existingEntry);
+
+			await expect(service.registerUserEntry(entry)).rejects.toThrow(
+				BadRequestException,
+			);
+			await expect(service.registerUserEntry(entry)).rejects.toThrow(
+				'Cannot create multiple entries within the same minute',
+			);
+
+			// Ensure we don't proceed with entry creation
+			expect(mockWorkingDaysService.createWorkingDayToUser).not.toHaveBeenCalled();
+			expect(mockEntriesModel.create).not.toHaveBeenCalled();
+		});
+
+		it('should allow entry creation when no existing entry in same minute', async () => {
+			const entry: RegisterNewEntryDto = {
+				user_id: 'user1',
+				company_id: 'company1',
+				latitude: '0',
+				longitude: '0',
+			};
+
+			// Mock no existing entry in the same minute
+			mockEntriesModel.findOne.mockResolvedValue(null);
+			const workingDay = { dataValues: { _id: 'wd1' } };
+			mockWorkingDaysService.createWorkingDayToUser.mockResolvedValue(
+				workingDay,
+			);
+			jest.spyOn(service, 'validadeEntryLocation').mockResolvedValue(true);
+			const createdEntry = { _id: 'entry1' };
+			mockEntriesModel.create.mockResolvedValue(createdEntry);
+
+			const result = await service.registerUserEntry(entry);
+			
+			expect(result).toBe(createdEntry);
+			expect(mockEntriesModel.findOne).toHaveBeenCalledWith({
+				where: {
+					user_id: entry.user_id,
+					entry_time: expect.any(Object), // Op.gte and Op.lte constraints
+				},
+			});
 		});
 	});
 });

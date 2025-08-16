@@ -2,6 +2,7 @@ import {
 	Inject,
 	Injectable,
 	NotFoundException,
+	BadRequestException,
 	forwardRef,
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/sequelize';
@@ -87,9 +88,46 @@ export class EntriesService {
 		return distance <= MAX_ALLOWED_DISTANCE;
 	}
 
+	private async validateEntryTimeConstraint(
+		user_id: string,
+		entryTime: Date,
+	): Promise<boolean> {
+		// Create start and end of the same minute
+		const startOfMinute = new Date(entryTime);
+		startOfMinute.setSeconds(0, 0);
+		
+		const endOfMinute = new Date(entryTime);
+		endOfMinute.setSeconds(59, 999);
+
+		const existingEntry = await this.entries.findOne({
+			where: {
+				user_id,
+				entry_time: {
+					[Op.gte]: startOfMinute,
+					[Op.lte]: endOfMinute,
+				},
+			},
+		});
+
+		return !existingEntry;
+	}
+
 	async registerUserEntry(entry: RegisterNewEntryDto): Promise<Entries | null> {
 		const today = new Date();
 		today.setHours(0, 0, 0, 0);
+
+		const entryTime = new Date();
+
+		const isValidTimeConstraint = await this.validateEntryTimeConstraint(
+			entry.user_id,
+			entryTime,
+		);
+
+		if (!isValidTimeConstraint) {
+			throw new BadRequestException(
+				'Cannot create multiple entries within the same minute.',
+			);
+		}
 
 		const currentWorkingDay: WorkingDays =
 			await this.workingDay.createWorkingDayToUser({
@@ -109,7 +147,7 @@ export class EntriesService {
 			_id,
 			user_id: entry.user_id,
 			working_day_id: currentWorkingDay.dataValues._id,
-			entry_time: new Date(),
+			entry_time: entryTime,
 			latitude: entry.latitude || null,
 			longitude: entry.longitude || null,
 			is_approved: validLocation,

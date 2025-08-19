@@ -17,6 +17,14 @@ import { CompaniesService } from '../companies/companies.service';
 import { EntriesApprovalService } from '../entries_approval/entries_approval.service';
 
 import { RegisterNewEntryDto } from './dtos/register-new-entry.dto';
+import { 
+	getCurrentDateTime, 
+	getCurrentDate, 
+	formatDateString, 
+	getMinuteBounds,
+	getStartOfDay,
+	getEndOfDay
+} from '../../common/utils/timezone.util';
 
 @Injectable()
 export class EntriesService {
@@ -92,12 +100,8 @@ export class EntriesService {
 		user_id: string,
 		entryTime: Date,
 	): Promise<boolean> {
-		// Create start and end of the same minute
-		const startOfMinute = new Date(entryTime);
-		startOfMinute.setSeconds(0, 0);
-		
-		const endOfMinute = new Date(entryTime);
-		endOfMinute.setSeconds(59, 999);
+		// Get start and end of the same minute in São Paulo timezone
+		const { start: startOfMinute, end: endOfMinute } = getMinuteBounds(entryTime);
 
 		const existingEntry = await this.entries.findOne({
 			where: {
@@ -113,10 +117,8 @@ export class EntriesService {
 	}
 
 	async registerUserEntry(entry: RegisterNewEntryDto): Promise<Entries | null> {
-		const today = new Date();
-		today.setHours(0, 0, 0, 0);
-
-		const entryTime = new Date();
+		const today = getCurrentDate();
+		const entryTime = getCurrentDateTime();
 
 		const isValidTimeConstraint = await this.validateEntryTimeConstraint(
 			entry.user_id,
@@ -132,7 +134,7 @@ export class EntriesService {
 		const currentWorkingDay: WorkingDays =
 			await this.workingDay.createWorkingDayToUser({
 				...entry,
-				worked_date: today.toDateString(),
+				worked_date: formatDateString(today),
 			});
 
 		const validLocation: boolean = await this.validadeEntryLocation(
@@ -163,10 +165,8 @@ export class EntriesService {
 	}
 
 	async getUserEntriesByDay(user_id: string, date: Date): Promise<Entries[]> {
-		const startOfDay = new Date(date);
-		startOfDay.setUTCHours(0, 0, 0, 0);
-		const endOfDay = new Date(date);
-		endOfDay.setUTCHours(23, 59, 59, 999);
+		const startOfDay = getStartOfDay(date);
+		const endOfDay = getEndOfDay(date);
 
 		return await this.entries.findAll({
 			where: {

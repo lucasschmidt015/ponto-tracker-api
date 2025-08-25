@@ -8,6 +8,7 @@ import { InjectModel } from '@nestjs/sequelize';
 import { v4 as uuidv4 } from 'uuid';
 
 import { EntriesApproval } from './entries_approval.model';
+import { getCurrentDateTime } from '../../common/utils/timezone.util';
 import { EntriesService } from '../entries/entries.service';
 import { UsersService } from '../users/users.service';
 
@@ -51,7 +52,7 @@ export class EntriesApprovalService {
 			throw new NotFoundException(`Entry approval with ID ${id} not found`);
 		}
 		entryApproval.approval_user_id = approval_user_id;
-		entryApproval.approval_date = new Date();
+		entryApproval.approval_date = getCurrentDateTime();
 		entryApproval.justificative = justificative;
 		await entryApproval.save();
 

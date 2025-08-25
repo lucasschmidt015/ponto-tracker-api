@@ -11,6 +11,7 @@ import { Reflector } from '@nestjs/core';
 import { IS_PUBLIC_KEY } from 'src/custom-decorators/public';
 import { InjectModel } from '@nestjs/sequelize';
 import { AuthToken } from 'src/modules/auth/auth-token.model';
+import { getCurrentDateTime } from '../../common/utils/timezone.util';
 
 interface JwtPayload {
 	sub: string;
@@ -66,7 +67,7 @@ export class AuthGuard implements CanActivate {
 			if (
 				!tokenRecord ||
 				tokenRecord.revoked ||
-				tokenRecord.expires_at <= new Date()
+				tokenRecord.expires_at <= getCurrentDateTime()
 			) {
 				throw new UnauthorizedException('Token is invalid or expired');
 			}

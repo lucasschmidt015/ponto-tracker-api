@@ -8,6 +8,7 @@ import { InjectModel } from '@nestjs/sequelize';
 import * as bcrypt from 'bcrypt';
 import { JwtService } from '@nestjs/jwt';
 import { AuthToken } from './auth-token.model';
+import { getCurrentDateTime } from '../../common/utils/timezone.util';
 import { v4 as uuidv4 } from 'uuid';
 
 const TOKEN_EXPIRES_IN = process.env.TOKEN_EXPIRES_IN || '1h';
@@ -147,7 +148,7 @@ export class AuthService {
 
 		if (tokenRecord.revoked) return false;
 
-		if (tokenRecord.expires_at <= new Date()) return false;
+		if (tokenRecord.expires_at <= getCurrentDateTime()) return false;
 
 		return true;
 	}
@@ -168,7 +169,7 @@ export class AuthService {
 		if (
 			!tokenRecord ||
 			tokenRecord.revoked ||
-			tokenRecord.expires_at <= new Date()
+			tokenRecord.expires_at <= getCurrentDateTime()
 		) {
 			throw new UnauthorizedException('Invalid or expired refresh token.');
 		}
@@ -189,7 +190,7 @@ export class AuthService {
 					user_id: userId,
 					type: 'access',
 					revoked: false,
-					createdAt: { $lt: new Date() },
+					createdAt: { $lt: getCurrentDateTime() },
 				},
 			},
 		);

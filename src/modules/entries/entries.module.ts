@@ -10,7 +10,7 @@ import { EntriesApprovalModule } from '../entries_approval/entries_approval.modu
 @Module({
 	imports: [
 		SequelizeModule.forFeature([Entries]),
-		WorkingDaysModule,
+		forwardRef(() => WorkingDaysModule),
 		CompaniesModule,
 		forwardRef(() => EntriesApprovalModule),
 	],

@@ -182,4 +182,16 @@ export class EntriesService {
 
 		return entries;
 	}
+
+	async getEntriesByWorkingDayId(working_day_id: string): Promise<Entries[] | null> {
+		const entries = await this.entries.findAll({
+			where: {
+				working_day_id
+			},
+			order: [['entry_time', 'ASC']],
+			raw: true,
+		});
+
+		return entries || null;
+	}
 }

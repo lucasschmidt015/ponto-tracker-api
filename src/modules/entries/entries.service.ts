@@ -169,14 +169,14 @@ export class EntriesService {
 	}
 
 	async getUserEntriesByDay(user_id: string, date: Date): Promise<Entries[] | null> {
-		console.log('getUserEntriesByDay <-----  ', date);
+		console.log('date <----- ', date);
 		const startOfDay = getStartOfDay(date);
 		const endOfDay = getEndOfDay(date);
 
-		console.log('startOfDay <----- ', startOfDay);
-		console.log('endOfDay <------', endOfDay);
+		console.log('startOfDay <---- ', startOfDay);
+		console.log('endOfDay <----- ', endOfDay);
 
-		const test = await this.entries.findAll({
+		const entries = await this.entries.findAll({
 			where: {
 				user_id,
 				entry_time: {
@@ -188,8 +188,8 @@ export class EntriesService {
 			raw: true,
 		});
 
-		console.log('test: ', test.length);
+		console.log('entries <----- ', entries.length);
 
-		return test;
+		return entries;
 	}
 }

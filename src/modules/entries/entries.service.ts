@@ -188,7 +188,7 @@ export class EntriesService {
 			raw: true,
 		});
 
-		console.log('test: ', test);
+		console.log('test: ', test.length);
 
 		return test;
 	}

@@ -28,6 +28,7 @@ export class EntriesController {
 		@Param('user_id') user_id: string,
 		@Query('date') date: string,
 	) {
+		console.log('controller <------ ', date);
 		const entryDate = date ? toSaoPauloTime(date) : getCurrentDate();
 		return this.entriesService.getUserEntriesByDay(user_id, entryDate);
 	}

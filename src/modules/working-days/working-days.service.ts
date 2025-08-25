@@ -65,6 +65,8 @@ export class WorkingDaysService {
 
 		const _id = uuidv4();
 
+		console.log('worked_date <---- ', worked_date);
+
 		const workingDayAlreadyExists = await this.workingDays.findOne({
 			where: {
 				user_id,
@@ -74,8 +76,11 @@ export class WorkingDaysService {
 		});
 
 		if (workingDayAlreadyExists) {
+			console.log('will return an existing working day <-----');
 			return workingDayAlreadyExists;
 		}
+
+		console.log('will create a new working day <-------');
 
 		const createdWorkingDay = await this.workingDays.create({
 			_id,

@@ -137,6 +137,8 @@ export class EntriesService {
 				worked_date: formatDateString(today),
 			});
 
+		console.log('current working day <----- ', currentWorkingDay);
+
 		const validLocation: boolean = await this.validadeEntryLocation(
 			entry.company_id,
 			entry.latitude,
@@ -155,6 +157,8 @@ export class EntriesService {
 			is_approved: validLocation,
 		});
 
+		console.log('newEntry <----- ', newEntry);
+
 		if (!validLocation) {
 			await this.entriesApprovalService.createEntryApproval(
 				newEntry.dataValues._id,
@@ -164,11 +168,14 @@ export class EntriesService {
 		return newEntry;
 	}
 
-	async getUserEntriesByDay(user_id: string, date: Date): Promise<Entries[]> {
+	async getUserEntriesByDay(user_id: string, date: Date): Promise<Entries[] | null> {
 		const startOfDay = getStartOfDay(date);
 		const endOfDay = getEndOfDay(date);
 
-		return await this.entries.findAll({
+		console.log('startOfDay <----- ', startOfDay);
+		console.log('endOfDay <------', endOfDay);
+
+		const test = await this.entries.findAll({
 			where: {
 				user_id,
 				entry_time: {
@@ -179,5 +186,9 @@ export class EntriesService {
 			order: [['entry_time', 'ASC']],
 			raw: true,
 		});
+
+		console.log('test: ', test);
+
+		return test;
 	}
 }

@@ -120,9 +120,6 @@ export class EntriesService {
 		const today = getCurrentDate();
 		const entryTime = getCurrentDateTime();
 
-		console.log('today <----- ', today);
-		console.log('entryTime <---- ', entryTime);
-
 		const isValidTimeConstraint = await this.validateEntryTimeConstraint(
 			entry.user_id,
 			entryTime,
@@ -139,8 +136,6 @@ export class EntriesService {
 				...entry,
 				worked_date: formatDateString(today),
 			});
-
-		console.log('current working day <----- ', currentWorkingDay.dataValues.worked_date);
 
 		const validLocation: boolean = await this.validadeEntryLocation(
 			entry.company_id,

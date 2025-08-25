@@ -65,6 +65,8 @@ export class WorkingDaysService {
 
 		const _id = uuidv4();
 
+		console.log('worked_date createWorkingDayToUser <----- ', worked_date)
+
 		const workingDayAlreadyExists = await this.workingDays.findOne({
 			where: {
 				user_id,

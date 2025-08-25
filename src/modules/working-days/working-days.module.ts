@@ -1,8 +1,9 @@
-import { Module } from '@nestjs/common';
+import { Module, forwardRef } from '@nestjs/common';
 import { SequelizeModule } from '@nestjs/sequelize';
 
 import { UsersModule } from '../users/users.module';
 import { CompaniesModule } from '../companies/companies.module';
+import { EntriesModule } from '../entries/entries.module';
 import { WorkingDaysController } from './working-days.controller';
 import { WorkingDaysScheduler } from './working-days.scheduler';
 import { WorkingDaysService } from './working-days.service';
@@ -13,6 +14,7 @@ import { WorkingDays } from './working-days.model';
 		SequelizeModule.forFeature([WorkingDays]),
 		UsersModule,
 		CompaniesModule,
+		forwardRef(() => EntriesModule),
 	],
 	controllers: [WorkingDaysController],
 	providers: [WorkingDaysService, WorkingDaysScheduler],

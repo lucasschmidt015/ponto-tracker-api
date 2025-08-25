@@ -21,14 +21,14 @@ export function getCurrentDate(): Date {
  * Get start of day for a given date in São Paulo timezone
  */
 export function getStartOfDay(date: Date): Date {
-	return moment(date).tz(TIMEZONE).startOf('day').toDate();
+	return moment.tz(date, TIMEZONE).startOf('day').toDate();
 }
 
 /**
  * Get end of day for a given date in São Paulo timezone
  */
 export function getEndOfDay(date: Date): Date {
-	return moment(date).tz(TIMEZONE).endOf('day').toDate();
+	return moment.tz(date, TIMEZONE).endOf('day').toDate();
 }
 
 /**
@@ -42,7 +42,7 @@ export function formatDateString(date: Date): string {
  * Get start and end of minute for a given date in São Paulo timezone
  */
 export function getMinuteBounds(date: Date): { start: Date; end: Date } {
-	const momentDate = moment(date).tz(TIMEZONE);
+	const momentDate = moment.tz(date, TIMEZONE);
 	return {
 		start: momentDate.startOf('minute').toDate(),
 		end: momentDate.endOf('minute').toDate(),
@@ -53,7 +53,7 @@ export function getMinuteBounds(date: Date): { start: Date; end: Date } {
  * Convert a date string or Date to São Paulo timezone
  */
 export function toSaoPauloTime(date: string | Date): Date {
-	return moment(date).tz(TIMEZONE).toDate();
+	return moment.tz(date, TIMEZONE).toDate();
 }
 
 /**
@@ -61,8 +61,8 @@ export function toSaoPauloTime(date: string | Date): Date {
  */
 export function isBeforeToday(date: Date): boolean {
 	const today = getCurrentDate();
-	const dateInSaoPaulo = moment(date).tz(TIMEZONE).startOf('day');
-	const todayInSaoPaulo = moment(today).tz(TIMEZONE).startOf('day');
+	const dateInSaoPaulo = moment.tz(date, TIMEZONE).startOf('day');
+	const todayInSaoPaulo = moment.tz(today, TIMEZONE).startOf('day');
 	
 	return dateInSaoPaulo.isBefore(todayInSaoPaulo);
 }

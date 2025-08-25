@@ -140,7 +140,7 @@ export class EntriesService {
 				worked_date: formatDateString(today),
 			});
 
-		console.log('current working day <----- ', currentWorkingDay.worked_date);
+		console.log('current working day <----- ', currentWorkingDay.dataValues.worked_date);
 
 		const validLocation: boolean = await this.validadeEntryLocation(
 			entry.company_id,
